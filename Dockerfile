@@ -9,38 +9,34 @@ RUN apt-get update && apt-get install -y \
 # Aktifkan mod_rewrite
 RUN a2enmod rewrite
 
-# Atasi warning ServerName (pastikan apache-custom.conf disediakan)
-COPY apache-custom.conf /etc/apache2/conf-available/servername.conf
-RUN a2enconf servername
+# Atasi warning ServerName
+RUN echo "ServerName localhost" > /etc/apache2/conf-available/servername.conf \
+    && a2enconf servername
 
-# Set document root ke public/
+# Set Laravel ke /public
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
     && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
-# Pindah ke folder aplikasi
+# Set working directory
 WORKDIR /var/www/html
 
 # Copy source code
 COPY . .
 
-# Copy composer dari image resmi
+# Copy composer binary
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Install dependencies Laravel
+# Install dependencies (tanpa dev)
 RUN composer install --no-dev --optimize-autoloader
-
-# Copy .env
-RUN cp .env.example .env
-
-# Generate app key
-RUN php artisan key:generate
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html/storage \
     && chmod -R 755 /var/www/html/bootstrap/cache
 
+# Expose port
 EXPOSE 80
 
-CMD ["apache2-foreground"]
+# ENTRYPOINT agar Laravel siap saat container jalan
+CMD ["sh", "-c", "php artisan config:clear && php artisan key:generate && apache2-foreground"]
