@@ -1,5 +1,7 @@
 FROM php:8.2-apache
 
+RUN php artisan key:generate
+
 # Install dependencies
 RUN apt-get update && apt-get install -y \
     git unzip zip libzip-dev libpng-dev libonig-dev libxml2-dev \
