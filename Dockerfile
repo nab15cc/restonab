@@ -6,34 +6,34 @@ RUN apt-get update && apt-get install -y \
     sqlite3 libsqlite3-dev libjpeg-dev libfreetype6-dev \
     && docker-php-ext-install pdo pdo_mysql zip
 
-# Enable mod_rewrite
+# Aktifkan mod_rewrite
 RUN a2enmod rewrite
 
-# Fix ServerName warning
+# Atasi warning ServerName (pastikan apache-custom.conf disediakan)
 COPY apache-custom.conf /etc/apache2/conf-available/servername.conf
 RUN a2enconf servername
 
-# Set Laravel public directory
+# Set document root ke public/
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
     && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
-# Set working directory
+# Pindah ke folder aplikasi
 WORKDIR /var/www/html
 
-# Copy source code (HARUS sebelum artisan dipanggil)
+# Copy source code
 COPY . .
 
-# Copy Composer
+# Copy composer dari image resmi
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Install PHP dependencies
+# Install dependencies Laravel
 RUN composer install --no-dev --optimize-autoloader
 
-# Copy .env jika belum ada
+# Copy .env
 RUN cp .env.example .env
 
-# ✅ Baru jalankan key generate SETELAH file artisan & env ada
+# Generate app key
 RUN php artisan key:generate
 
 # Set permissions
